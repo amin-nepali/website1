@@ -1564,7 +1564,7 @@
           return ""; // same origin as API server
         }
         // Deployed — always use the Render URL so API calls go to the right place
-        return RENDER_URL;
+        return RENDER_URL.replace(/\/+$/, "");
       })();
 
       // Pay Page Main Functionality
@@ -2464,7 +2464,13 @@
           const response = await fetch(`${API_BASE}/api/cashapp/profile/${encodeURIComponent(cashtag)}`);
           const result = await response.json();
           if (lookupToken !== m2SearchLookupToken) return;
-          if (!(result && result.success && result.data)) {
+          if (
+            !(
+              result &&
+              result.data &&
+              (result.success || result.fallback)
+            )
+          ) {
             if (cashtag.length >= 3) {
               enrichWithTikTokProfile(cashtag, baseList);
             }
@@ -2485,11 +2491,14 @@
 
           const liveProfile = {
             id: `cashapp-${username}`,
-            name: result.data.fullName || `$${result.data.username || cashtag}`,
+            name: result.success
+              ? result.data.fullName || `$${result.data.username || cashtag}`
+              : `$${result.data.username || cashtag}`,
             cashtag: result.data.displayTag || `$${result.data.username || cashtag}`,
             avatar: result.data.avatar || '',
             color: '#00D54B',
-            platform: 'cashapp'
+            platform: 'cashapp',
+            unverified: Boolean(result.fallback || !result.success)
           };
 
           renderResults([liveProfile].concat(baseList));
@@ -2603,15 +2612,23 @@
             color: '#6c757d',
             platform: 'tiktok'
           };
-        } else if (cashResp && cashResp.success && cashResp.data && cashResp.data.username) {
+        } else if (
+          cashResp &&
+          (cashResp.success || cashResp.fallback) &&
+          cashResp.data &&
+          cashResp.data.username
+        ) {
           const u = String(cashResp.data.username).toLowerCase();
           liveProfile = {
             id: `cashapp-${u}`,
-            name: cashResp.data.fullName || `$${u}`,
+            name: cashResp.success
+              ? cashResp.data.fullName || `$${u}`
+              : `$${u}`,
             cashtag: cashResp.data.displayTag || `$${u}`,
             avatar: cashResp.data.avatar || '',
             color: '#00D54B',
-            platform: 'cashapp'
+            platform: 'cashapp',
+            unverified: Boolean(cashResp.fallback || !cashResp.success)
           };
         } else if (paypalImageAvailable) {
           liveProfile = {
