@@ -24,7 +24,7 @@
       rel="apple-touch-icon"
       href="icons/Cash_App-Logo.wine.png"
     />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.amazonaws.com https://*.tiktokcdn.com https://*.tiktokcdn-us.com https://*.tiktok.com https://cash.app https://api.nftoken.info http://localhost:3000; connect-src 'self' http://localhost:3000 http://localhost:5174 https://api.nftoken.info;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.amazonaws.com https://*.tiktokcdn.com https://*.tiktokcdn-us.com https://*.tiktok.com https://cash.app https://api.nftoken.info https://unavatar.io http://localhost:3000; connect-src 'self' http://localhost:3000 http://localhost:5174 https://api.nftoken.info;">
     <script>
       (() => {
         const KEY = "cashAppDarkMode";
@@ -2200,16 +2200,18 @@
         if (contact.avatar) {
           const isTT = window.UsernameSearch.isTikTokProfile(contact);
           const isCA = window.UsernameSearch.isCashAppProfile(contact);
-          if (contact.platform === 'paypal') {
+          if (contact.platform === 'paypal' || isTT || isCA) {
             const image = document.createElement('img');
             image.src = contact.avatar;
             image.alt = '';
             image.referrerPolicy = 'no-referrer';
             image.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:50%';
+            image.onerror = () => {
+              image.remove();
+              div.style.backgroundColor = contact.color || '#666';
+              div.textContent = (contact.name || '?').charAt(0).toUpperCase();
+            };
             div.appendChild(image);
-          } else if (isTT || isCA) {
-            const avatarUrl = String(contact.avatar).replace(/["\\\n\r]/g, "\\$&");
-            div.style.cssText = `background-image:url("${avatarUrl}");background-size:cover;background-position:center;background-color:${isTT?'#000':'#222'}`;
           } else {
             const avatarUrl = String(contact.avatar).replace(/["\\\n\r]/g, "\\$&");
             div.style.cssText = `background-image:url("${avatarUrl}");background-size:725%;background-position:center 22%`;
@@ -2564,6 +2566,7 @@
         const myToken = ++m2SearchLookupToken;
         const encodedUsername = encodeURIComponent(username);
         const paypalAvatar = `https://unavatar.io/paypal/${encodedUsername}`;
+        const normalizedUsername = username.toLowerCase();
         const requestProfile = async (provider, endpoint) => {
           try {
             const response = await fetch(`${API_BASE}${endpoint}/${encodedUsername}`);
@@ -2594,44 +2597,68 @@
           image.src = paypalAvatar;
         });
 
-        const [tikResp, cashResp, paypalImageAvailable] = await Promise.all([
-          requestProfile('TikTok', '/api/tiktok/profile'),
-          requestProfile('Cash App', '/api/cashapp/profile'),
-          checkPayPalAvatar()
-        ]);
-        if (myToken !== m2SearchLookupToken) return;
+        const matchesUsername = (profile) =>
+          String(profile?.data?.username || '')
+            .replace(/^[@$]/, '')
+            .toLowerCase() === normalizedUsername;
+        const showFetchedProfile = (profile) => {
+          if (!profile) return;
+          const key = String(profile.cashtag || profile.name || '')
+            .toLowerCase()
+            .replace(/^[$@]/, '');
+          const dedupedBase = baseList.filter((contact) =>
+            String(contact.cashtag || contact.name || '')
+              .toLowerCase()
+              .replace(/^[$@]/, '') !== key
+          );
+          renderResults([profile, ...dedupedBase]);
+        };
 
-        let liveProfile = null;
-        if (tikResp && tikResp.success && tikResp.data && tikResp.data.username) {
-          const u = String(tikResp.data.username).toLowerCase();
-          liveProfile = {
-            id: `tiktok-${u}`,
-            name: tikResp.data.nickname || `@${u}`,
-            cashtag: `@${u}`,
-            avatar: tikResp.data.avatar || '',
+        const tikTokResult = await requestProfile('TikTok', '/api/tiktok/profile');
+        if (myToken !== m2SearchLookupToken) return;
+        if (tikTokResult?.success && matchesUsername(tikTokResult)) {
+          const profile = {
+            id: `tiktok-${tikTokResult.data.username}`,
+            name: tikTokResult.data.nickname || `@${tikTokResult.data.username}`,
+            cashtag: `@${tikTokResult.data.username}`,
+            avatar: tikTokResult.data.avatar || '',
             color: '#6c757d',
             platform: 'tiktok'
           };
-        } else if (
-          cashResp &&
-          (cashResp.success || cashResp.fallback) &&
-          cashResp.data &&
-          cashResp.data.username
+          showFetchedProfile(profile);
+          return;
+        }
+
+        const cashAppResult = await requestProfile('Cash App', '/api/cashapp/profile');
+        if (myToken !== m2SearchLookupToken) return;
+        if (
+          matchesUsername(cashAppResult) &&
+          (cashAppResult.success || cashAppResult.fallback)
         ) {
-          const u = String(cashResp.data.username).toLowerCase();
-          liveProfile = {
-            id: `cashapp-${u}`,
-            name: cashResp.success
-              ? cashResp.data.fullName || `$${u}`
-              : `$${u}`,
-            cashtag: cashResp.data.displayTag || `$${u}`,
-            avatar: cashResp.data.avatar || '',
+          const isVerified = Boolean(
+            cashAppResult.success && !cashAppResult.fallback
+          );
+          const profile = {
+            id: `cashapp-${cashAppResult.data.username}`,
+            name: isVerified
+              ? cashAppResult.data.fullName || `$${cashAppResult.data.username}`
+              : `$${cashAppResult.data.username}`,
+            cashtag:
+              cashAppResult.data.displayTag ||
+              `$${cashAppResult.data.username}`,
+            avatar: cashAppResult.data.avatar || '',
             color: '#00D54B',
             platform: 'cashapp',
-            unverified: Boolean(cashResp.fallback || !cashResp.success)
+            unverified: !isVerified
           };
-        } else if (paypalImageAvailable) {
-          liveProfile = {
+          showFetchedProfile(profile);
+          return;
+        }
+
+        const paypalImageAvailable = await checkPayPalAvatar();
+        if (myToken !== m2SearchLookupToken) return;
+        if (paypalImageAvailable) {
+          showFetchedProfile({
             id: `paypal-${username}`,
             name: username,
             cashtag: 'PayPal image · unverified',
@@ -2639,20 +2666,11 @@
             color: '#0070ba',
             platform: 'paypal',
             unverified: true
-          };
-        }
-
-        if (!liveProfile) {
-          renderResults(baseList);
+          });
           return;
         }
-        const key = (liveProfile.cashtag || liveProfile.name)
-          .toLowerCase()
-          .replace(/^[$@]/, '');
-        const dedupedBase = baseList.filter(c =>
-          (c.cashtag || c.name || '').toLowerCase().replace(/^[$@]/, '') !== key
-        );
-        renderResults([liveProfile, ...dedupedBase]);
+
+        renderResults(baseList);
       }
 
       if (searchInput) {
