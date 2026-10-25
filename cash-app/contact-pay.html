@@ -65,6 +65,7 @@
     />
     <script src="guard.html"></script>
     <script src="dark-mode.js"></script>
+    <script src="username-search.js"></script>
     <style>
       @font-face {
         font-family: "CashMarket";
@@ -1337,21 +1338,6 @@
             color: "#DAA520",
           },
         ];
-        const isTikTokProfile = (entity = {}) => {
-          const platform = (entity.platform || "").toLowerCase();
-          if (platform === "tiktok") return true;
-          const handle = (entity.cashtag || "").trim();
-          return handle.startsWith("@");
-        };
-        const isCashAppProfile = (entity = {}) => {
-          const platform = (entity.platform || "").toLowerCase();
-          if (platform === "cashapp") return true;
-          // Check if avatar is a direct Cash App avatar URL (not share-image)
-          const avatar = (entity.avatar || "");
-          return avatar.includes('/api/cashapp/avatar') || 
-                 avatar.includes('franklin-assets') || 
-                 avatar.includes('cash-images');
-        };
         const normalizeCashtagInput = (value = "") =>
           value
             .trim()
@@ -1432,44 +1418,14 @@
         };
         const saveContacts = () =>
           localStorage.setItem(contactStorageKey, JSON.stringify(contacts));
-        function renderContacts() {
-          contactListEl.innerHTML = contacts
-            .map((contact) => {
-              const contactName = contact.name || "";
-              const contactCashtag = contact.cashtag || "";
-              const hasAvatarImage = Boolean(contact.avatar);
-              const avatarUrl = String(contact.avatar || "")
-                .replace(/&/g, "&amp;")
-                .replace(/"/g, "%22")
-                .replace(/'/g, "%27")
-                .replace(/</g, "%3C")
-                .replace(/>/g, "%3E");
-              const fallbackColor = contact.color || "#666666";
-              const isTikTokContact = hasAvatarImage && isTikTokProfile(contact);
-              const isCashAppContact = hasAvatarImage && isCashAppProfile(contact);
-              // Use cover sizing for TikTok and CashApp direct avatars, zoom for share-image URLs
-              const avatarStyles = hasAvatarImage
-                ? (isTikTokContact || isCashAppContact)
-                  ? `background-image: url('${avatarUrl}'); background-size: cover; background-position: center; background-color: ${isTikTokContact ? '#000000' : '#222222'};`
-                  : `background-image: url('${avatarUrl}'); background-size: 725%; background-position: center 22%;`
-                : `background-color:${fallbackColor};`;
-              const avatarContent = hasAvatarImage
-                ? `<div class="avatar${
-                    isTikTokContact ? " avatar-tiktok" : ""
-                  }" style="${avatarStyles}" data-edit-id="${contact.id}"></div>`
-                  : `<div class="avatar" style="${avatarStyles}" data-edit-id="${contact.id}">${
-                    contact.initial || contactName.charAt(0)
-                  }</div>`;
-              return `<div class="contact-item" data-id="${
-                contact.id
-              }" data-name="${contactName.toLowerCase()}" data-cashtag="${contactCashtag.toLowerCase()}"><div class="contact-details">${avatarContent}<div class="contact-info"><div class="contact-name">${
-                contactName
-              }</div><div class="contact-handle">${
-                formatHandleForDisplay(contactCashtag)
-              }</div></div></div><div class="checkbox"><i class="fa-solid fa-check"></i></div></div>`;
-            })
-            .join("");
-        }
+        const usernameSearch = window.UsernameSearch.create({
+          contactListEl,
+          typedRecipientContainer,
+          getContacts: () => contacts,
+          getTypedRecipientData: () => typedRecipientData,
+          formatHandleForDisplay,
+        });
+        const { renderContacts, filterContactsOnInput } = usernameSearch;
         function handleContactSelection(targetItem) {
           const id = targetItem.dataset.id;
           const isSelected = targetItem.classList.contains("selected");
@@ -1491,70 +1447,6 @@
 
           updatePayButtonState();
         }
-        const filterContactsOnInput = (rawValue = "", useTikTokLookup = false) => {
-          const query = rawValue.toLowerCase().trim();
-          const normalizedQuery = query.replace(/^[@$]/, '');
-
-          if (useTikTokLookup) {
-            // When doing TikTok lookup, hide duplicate matches
-            let hasExactMatch = false;
-            
-            contactListEl.querySelectorAll(".contact-item").forEach((item) => {
-              const name = item.dataset.name;
-              const cashtag = item.dataset.cashtag.replace(/^[@$]/, '');
-              
-              // Check if this contact matches the search exactly
-              if (name === normalizedQuery || cashtag === normalizedQuery) {
-                hasExactMatch = true;
-                item.style.display = "flex";
-              } else {
-                item.style.display = "flex";
-              }
-            });
-            
-            // Hide typed recipient preview if there's an exact match in contacts
-            if (hasExactMatch && typedRecipientData) {
-              const typedHandle = (typedRecipientData.cashtag || '').replace(/^[@$]/, '');
-              const typedName = (typedRecipientData.name || '').toLowerCase();
-              
-              contactListEl.querySelectorAll(".contact-item").forEach((item) => {
-                const contactName = item.dataset.name;
-                const contactHandle = item.dataset.cashtag.replace(/^[@$]/, '');
-                
-                // Hide typed preview if it matches any existing contact
-                if (contactName === typedName || contactHandle === typedHandle) {
-                  typedRecipientContainer.classList.add("hidden");
-                }
-              });
-            }
-            return;
-          }
-
-          if (query.trim()) {
-            let hasMatchingContact = false;
-
-            contactListEl.querySelectorAll(".contact-item").forEach((item) => {
-              const name = item.dataset.name;
-              const cashtag = item.dataset.cashtag;
-              const normalizedCashtag = cashtag.replace(/^[@$]/, '');
-              const matches =
-                name.includes(normalizedQuery) ||
-                normalizedCashtag.includes(normalizedQuery);
-              item.style.display = matches ? "flex" : "none";
-              if (matches) hasMatchingContact = true;
-            });
-
-            if (hasMatchingContact) {
-              typedRecipientContainer.classList.add("hidden");
-            }
-          } else {
-            contactListEl
-              .querySelectorAll(".contact-item")
-              .forEach((item) => {
-                item.style.display = "flex";
-              });
-          }
-        };
         function setPayButtonVisual(isEnabled) {
           payBtn.classList.toggle("active", isEnabled);
           if (isEnabled) {

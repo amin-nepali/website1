@@ -1317,6 +1317,7 @@
       .m2-notif-msg{font-size:13px;color:rgba(255,255,255,.55);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
     </style>
     <script src="dark-mode.js"></script>
+    <script src="username-search.js"></script>
   </head>
   <body>
     <!-- Time Left Popup Notification -->
@@ -2193,20 +2194,12 @@
         try { const s = localStorage.getItem(CONTACT_KEY); return s ? JSON.parse(s) : DEFAULT_CONTACTS; }
         catch(e) { return DEFAULT_CONTACTS; }
       }
-      function isTikTok(c) {
-        if ((c.platform||'').toLowerCase()==='tiktok') return true;
-        return (c.cashtag||'').trim().startsWith('@');
-      }
-      function isCashApp(c) {
-        if ((c.platform||'').toLowerCase()==='cashapp') return true;
-        const av = c.avatar||'';
-        return av.includes('/api/cashapp/avatar')||av.includes('franklin-assets')||av.includes('cash-images');
-      }
       function makeAv(contact, cls) {
         const div = document.createElement('div');
         div.className = cls;
         if (contact.avatar) {
-          const isTT = isTikTok(contact), isCA = isCashApp(contact);
+          const isTT = window.UsernameSearch.isTikTokProfile(contact);
+          const isCA = window.UsernameSearch.isCashAppProfile(contact);
           if (contact.platform === 'paypal') {
             const image = document.createElement('img');
             image.src = contact.avatar;
@@ -2434,15 +2427,13 @@
       function showSpinner() { if (searchSpinner) searchSpinner.classList.remove('m2-hidden'); }
       function hideSpinner() { if (searchSpinner) searchSpinner.classList.add('m2-hidden'); }
 
-      function renderResults(list) {
-        hideSpinner();
-        if (!resultsList) return;
-        resultsList.innerHTML = '';
-        if (!list.length) {
-          resultsList.innerHTML = '<div style="color:rgba(255,255,255,.35);font-size:14px;padding:16px 0">No results</div>';
-          return;
-        }
-        list.forEach(c => {
+      const usernameSearch = window.UsernameSearch.create({
+        contactListEl: resultsList,
+        getContacts: () => mergeRecentFirst(getContacts()),
+        formatHandleForDisplay: (handle) => handle,
+        itemSelector: ".m2-result-item",
+        emptyResultsHtml: '<div style="color:rgba(255,255,255,.35);font-size:14px;padding:16px 0">No results</div>',
+        renderContact: (c) => {
           const item = document.createElement('div');
           item.className = 'm2-result-item';
           const av = makeAv(c, 'm2-result-av');
@@ -2455,8 +2446,13 @@
           info.appendChild(nm); info.appendChild(hd);
           item.appendChild(av); item.appendChild(info);
           item.addEventListener('click', () => selectContact(c));
-          resultsList.appendChild(item);
-        });
+          return item;
+        },
+      });
+
+      function renderResults(list) {
+        hideSpinner();
+        if (resultsList) usernameSearch.renderContacts(list);
       }
 
       async function enrichWithCashAppProfile(query, baseList) {
@@ -2653,10 +2649,10 @@
             renderResults(mergeRecentFirst(getContacts()));
             return;
           }
-          const filtered = mergeRecentFirst(getContacts()).filter(c => {
-            return (c.name||'').toLowerCase().includes(q) ||
-                   (c.cashtag||'').toLowerCase().replace(/^[$@]/,'').includes(q);
-          });
+          const filtered = usernameSearch.filterContacts(
+            mergeRecentFirst(getContacts()),
+            raw
+          );
           renderResults(filtered);
           if (mode === 'both') {
             if (!filtered.length) showSpinner();
