@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<!-- Mirrored from https://hollow-sapphire-lcoqg6rwcl.edgeone.app/login.html by HTTrack Website Copier/3.x [XR&CO], Sun, 25 Oct 2026 05:12:43 GMT -->
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0f8038" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  <meta name="apple-mobile-web-app-title" content="Cash Mode" />
+  <link rel="manifest" href="site.webmanifest" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/Cash_App-Logo.wine.png" />
+  <link rel="apple-touch-icon" href="icons/Cash_App-Logo.wine.png" />
+  <title>Sign in</title>
+
+  <!-- Boot dark mode before paint so the login card matches user preference -->
+  <script>
+    (() => {
+      try {
+        if (localStorage.getItem('cashAppDarkMode') === 'true') {
+          document.documentElement.classList.add('dark-boot');
+        }
+      } catch (_) {}
+    })();
+  </script>
+
+  <style>
+    @font-face {
+      font-family: "CashMarket";
+      src: url(font/CashSans.ttf);
+      font-display: swap;
+    }
+    :root {
+      --accent-green: #47b349;
+      --font-family: "CashMarket", -apple-system, BlinkMacSystemFont, sans-serif;
+      --bg-primary: #ffffff;
+      --bg-secondary: #f8f9fa;
+      --text-primary: #000000;
+      --text-secondary: #666666;
+      --border-color: #e0e0e0;
+      --card-bg: #ffffff;
+    }
+    html.dark-boot,
+    body.dark-mode {
+      --bg-primary: #000000;
+      --bg-secondary: #1a1a1a;
+      --text-primary: #ffffff;
+      --text-secondary: #cccccc;
+      --border-color: #333333;
+      --card-bg: #1a1a1a;
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      min-height: 100%;
+      font-family: var(--font-family);
+      background: #051706;
+      color: var(--text-primary);
+    }
+
+    /* ── Login screen ─────────────────────────────────────────────────── */
+    .login-screen {
+      position: fixed;
+      inset: 0;
+      background: #051706;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      z-index: 2000;
+    }
+    .login-screen.hidden { display: none; }
+
+    .login-card {
+      position: relative;
+      width: 100%;
+      max-width: 380px;
+      background: var(--card-bg);
+      color: var(--text-primary);
+      border-radius: 20px;
+      padding: 32px;
+      box-shadow: 0 30px 65px rgba(0, 0, 0, 0.45);
+    }
+    .login-card h1 {
+      font-size: 26px;
+      margin: 0 0 6px;
+      color: var(--text-primary);
+    }
+    .login-card p {
+      margin: 0 0 16px;
+      color: var(--text-secondary);
+    }
+    .login-card label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+    }
+    .login-card input {
+      width: 100%;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid #cbd5f5;
+      margin-bottom: 16px;
+      font-size: 15px;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: inherit;
+    }
+    .login-card button[type="submit"] {
+      width: 100%;
+      padding: 12px;
+      border-radius: 14px;
+      border: none;
+      background: #0f8038;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      font-family: inherit;
+    }
+    .login-card button[type="submit"]:disabled {
+      opacity: 0.6;
+      cursor: progress;
+    }
+    .login-error {
+      color: #b91c1c;
+      font-size: 13px;
+      margin-top: 8px;
+    }
+    .login-attempts {
+      font-size: 12px;
+      color: #b45309;
+      margin-top: 4px;
+    }
+    .login-footnote {
+      margin-top: 20px;
+      font-size: 12px;
+      color: #64748b;
+      text-align: center;
+    }
+    .hidden { display: none !important; }
+
+    .password-toggle {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: transparent;
+      border: none;
+      padding: 4px;
+      cursor: pointer;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ── Mode selector ─────────────────────────────────────────────────── */
+    .mode-seg {
+      display: flex;
+      background: rgba(0, 0, 0, 0.07);
+      border-radius: 10px;
+      padding: 4px;
+      margin-bottom: 22px;
+    }
+    .mode-seg-btn {
+      flex: 1;
+      background: transparent;
+      border: none;
+      border-radius: 7px;
+      padding: 8px 0;
+      font-size: 13px;
+      font-weight: 600;
+      color: #94a3b8;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: var(--font-family);
+    }
+    .mode-seg-btn.active {
+      background: #fff;
+      color: #111;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    }
+    body.dark-mode .mode-seg { background: rgba(255, 255, 255, 0.07); }
+    body.dark-mode .mode-seg-btn.active { background: #2c2c2e; color: #fff; }
+
+    /* ── Admin panel ───────────────────────────────────────────────────── */
+    .admin-panel {
+      position: fixed;
+      inset: 0;
+      background: rgba(7, 7, 7, 0.8);
+      display: none;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 32px 16px;
+      z-index: 2100;
+      overflow-y: auto;
+    }
+    .admin-panel.active { display: flex; }
+
+    .admin-card {
+      width: 100%;
+      max-width: 960px;
+      background: var(--bg-secondary);
+      border-radius: 24px;
+      padding: 28px;
+      box-shadow: 0 30px 60px rgba(0, 0, 0, 0.35);
+      color: var(--text-primary);
+    }
+    .admin-heading {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .admin-heading h2 { font-size: 26px; margin: 4px 0 0; }
+    .admin-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #94a3b8;
+      font-weight: 700;
+    }
+    .admin-heading-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+    .admin-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .admin-stat-card {
+      background: #fff;
+      border-radius: 18px;
+      padding: 16px;
+      box-shadow: inset 0 0 0 1px #e2e8f0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .stat-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .stat-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: #111;
+    }
+    .stat-pill {
+      display: inline-flex;
+      align-items: center;
+      width: fit-content;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+    }
+    .stat-pill.soft { background: rgba(15,128,56,.1); color: #0f8038; }
+    .stat-pill.success { background: rgba(37,99,235,.12); color: #2563eb; }
+    .stat-pill.muted { background: rgba(148,163,184,.2); color: #475569; }
+    .stat-pill.warning { background: rgba(234,88,12,.15); color: #ea580c; }
+
+    .admin-section {
+      background: var(--card-bg);
+      border-radius: 18px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: inset 0 0 0 1px var(--border-color);
+    }
+    .admin-section h3 { margin: 0 0 4px; font-size: 20px; }
+    .section-heading {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .section-note { font-size: 13px; color: #64748b; max-width: 360px; }
+    .section-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    .admin-form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }
+    .admin-form-grid label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .admin-form-grid input,
+    .admin-form-grid select {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid #cbd5f5;
+      font-size: 14px;
+      font-family: inherit;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+    }
+    .form-footer {
+      margin-top: 16px;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .pill-button {
+      background: #0f8038;
+      color: #fff;
+      border: none;
+      border-radius: 999px;
+      padding: 10px 20px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+      font-family: inherit;
+    }
+    .pill-button.secondary { background: #334155; }
+    .pill-button.danger { background: #b91c1c; }
+    .pill-button:active { transform: scale(0.97); }
+
+    .users-list-wrapper { max-height: 55vh; overflow-y: auto; }
+    .users-list { display: flex; flex-direction: column; gap: 12px; }
+    .empty-state-card {
+      background: #f8fafc;
+      border-radius: 16px;
+      padding: 24px;
+      text-align: center;
+      color: #94a3b8;
+      font-size: 14px;
+      border: 1px dashed #cbd5f5;
+      margin-top: 12px;
+    }
+
+    .user-row {
+      background: var(--card-bg);
+      border-radius: 18px;
+      padding: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      box-shadow: inset 0 0 0 1px var(--border-color);
+    }
+    .user-meta { font-size: 13px; color: #475569; margin-top: 6px; line-height: 1.4; }
+    .user-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+    .user-tag {
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: 999px;
+      padding: 4px 10px;
+    }
+    .user-tag.active { background: rgba(34,197,94,.15); color: #15803d; }
+    .user-tag.pending { background: rgba(59,130,246,.12); color: #1d4ed8; }
+    .user-tag.expiring { background: rgba(234,88,12,.15); color: #c2410c; }
+
+    .user-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .user-actions button {
+      border: none;
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .user-actions .add-day    { background: #16a34a; color: #fff; }
+    .user-actions .remove-day { background: #f97316; color: #fff; }
+    .user-actions .edit-pass  { background: #2563eb; color: #fff; }
+    .user-actions .delete-user{ background: #dc2626; color: #fff; }
+
+    .admin-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .admin-toolbar input {
+      flex: 1;
+      min-width: 180px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid #cbd5f5;
+      font-family: inherit;
+    }
+
+    @media (max-width: 600px) {
+      .admin-card { padding: 18px; }
+      .admin-form-grid { grid-template-columns: 1fr; }
+      .admin-heading { flex-direction: column; align-items: flex-start; }
+      .admin-heading-actions { justify-content: flex-start; }
+    }
+  </style>
+</head>
+<body data-page="login">
+
+  <!-- ══ LOGIN SCREEN ══ -->
+  <div id="loginScreen" class="login-screen">
+    <div class="login-card">
+      <div class="mode-seg" id="modeSeg">
+        <button class="mode-seg-btn" data-mode="1" type="button">Mode 1</button>
+        <button class="mode-seg-btn" data-mode="2" type="button">Mode 2</button>
+      </div>
+      <h1>Secure Access</h1>
+      <p>Enter your assigned credentials to unlock Cash mode. Time starts immediately after you log in.</p>
+      <form id="loginForm">
+        <label for="loginUsername">Username</label>
+        <input type="text" id="loginUsername" placeholder="username" autocomplete="username" required />
+
+        <label for="loginPassword">Password</label>
+        <div style="position: relative; margin-bottom: 15px;">
+          <input type="password" id="loginPassword" placeholder="••••••" autocomplete="current-password" required style="padding-right: 45px; margin-bottom: 0;" />
+          <button type="button" class="password-toggle" data-target="loginPassword" aria-label="Show password">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 20px; height: 20px; color: #6b7280;">
+              <path data-eye-open stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+              <path data-eye-open stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+              <path data-eye-closed style="display: none;" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path>
+            </svg>
+          </button>
+        </div>
+
+        <button type="submit" id="loginButton">Log in</button>
+      </form>
+      <p id="loginError" class="login-error hidden"></p>
+      <div id="loginAttempts" class="login-attempts hidden">
+        Attempts used: <span id="attemptValue">0</span>/5
+      </div>
+      <p class="login-footnote">1 account = 1 device. contact admin on Instagram:- <a href="https://www.instagram.com/mr.uk0wme/" target="_blank" rel="noopener noreferrer" style="color:#0f8038;font-weight:600;text-decoration:none;">@mr.uk0wme</a></p>
+    </div>
+  </div>
+
+  <!-- ══ ADMIN PANEL ══ -->
+  <div id="adminPanel" class="admin-panel" aria-hidden="true">
+    <div class="admin-card">
+      <div class="admin-heading">
+        <div>
+          <p class="admin-label">Control Center</p>
+          <h2>Admin Panel</h2>
+        </div>
+        <div class="admin-heading-actions">
+          <button class="pill-button secondary" type="button" id="refreshCustomersBtn">Refresh</button>
+          <button class="pill-button secondary" type="button" id="closeAdminBtn">Close</button>
+        </div>
+      </div>
+
+      <div class="admin-stats-grid">
+        <div class="admin-stat-card">
+          <p class="stat-label">Total users</p>
+          <p class="stat-value" id="totalUsersStat">0</p>
+          <span class="stat-pill soft">All plans</span>
+        </div>
+        <div class="admin-stat-card">
+          <p class="stat-label">Active now</p>
+          <p class="stat-value" id="activeUsersStat">0</p>
+          <span class="stat-pill success">Countdown running</span>
+        </div>
+        <div class="admin-stat-card">
+          <p class="stat-label">Waiting</p>
+          <p class="stat-value" id="waitingUsersStat">0</p>
+          <span class="stat-pill muted">Pending login</span>
+        </div>
+        <div class="admin-stat-card">
+          <p class="stat-label">Expiring soon</p>
+          <p class="stat-value" id="expiringUsersStat">0</p>
+          <span class="stat-pill warning">Under 6h</span>
+        </div>
+      </div>
+
+      <section class="admin-section">
+        <div class="section-heading">
+          <div>
+            <p class="admin-label">New pass</p>
+            <h3>Create customer</h3>
+          </div>
+          <p class="section-note">Set the pass length exactly like the TikTok dashboard.</p>
+        </div>
+        <form id="createUserForm">
+          <div class="admin-form-grid">
+            <div>
+              <label for="newUsername">Username</label>
+              <input type="text" id="newUsername" placeholder="new username" required />
+            </div>
+            <div>
+              <label for="newPassword">Password</label>
+              <div style="position: relative;">
+                <input type="password" id="newPassword" placeholder="temporary password" minlength="6" required style="padding-right: 45px;" />
+                <button type="button" class="password-toggle" data-target="newPassword" aria-label="Show password">
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 20px; height: 20px; color: #6b7280;">
+                    <path data-eye-open stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    <path data-eye-open stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                    <path data-eye-closed style="display: none;" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div>
+              <label for="userDuration">Duration</label>
+              <select id="userDuration">
+                <option value="30">30 minutes (test)</option>
+                <option value="60">1 hour</option>
+                <option value="120">2 hours</option>
+                <option value="1440">1 day</option>
+                <option value="10080">1 week</option>
+                <option value="43200">1 month (30 days)</option>
+                <option value="129600">3 months</option>
+                <option value="259200">6 months</option>
+                <option value="525600">1 year</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-footer">
+            <button class="pill-button" type="submit">Save customer</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="admin-section">
+        <div class="section-heading">
+          <div>
+            <p class="admin-label">Customers</p>
+            <h3>Live sessions</h3>
+          </div>
+          <div class="section-actions">
+            <button class="pill-button danger" type="button" id="deleteExpiredBtn">Delete expired</button>
+          </div>
+        </div>
+        <div class="admin-toolbar">
+          <input type="text" id="adminSearchInput" placeholder="Search username" />
+        </div>
+        <div class="users-list-wrapper">
+          <div id="usersList" class="users-list"></div>
+          <div id="adminEmptyState" class="empty-state-card" style="display:none;" data-default-text="No customers yet. Create your first user above.">
+            <p>No customers yet. Create your first user above.</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Mode selector (persists choice for pay.html) -->
+  <script>
+    (function () {
+      const MODE_KEY = 'cashAppPayMode';
+      const btns = document.querySelectorAll('.mode-seg-btn');
+      let mode = localStorage.getItem(MODE_KEY) || '1';
+      const sync = () => {
+        btns.forEach((b) => b.classList.toggle('active', b.dataset.mode === mode));
+        document.body.classList.toggle('pay-mode-2', mode === '2');
+      };
+      sync();
+      btns.forEach((b) =>
+        b.addEventListener('click', () => {
+          mode = b.dataset.mode;
+          localStorage.setItem(MODE_KEY, mode);
+          sync();
+        })
+      );
+    })();
+  </script>
+
+  <!-- Auth + admin behaviour -->
+  <script src="cash-auth.js"></script>
+</body>
+
+<!-- Mirrored from https://hollow-sapphire-lcoqg6rwcl.edgeone.app/login.html by HTTrack Website Copier/3.x [XR&CO], Sun, 25 Oct 2026 05:12:43 GMT -->
+</html>
